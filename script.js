@@ -127,68 +127,62 @@ const GameController = (function() {
 // 4. THE DISPLAY CONTROLLER (Module Pattern)
 // ==========================================
 // Handles all DOM rendering and user interaction events.
-const DisplayController = (function () {
-
-    // Cache DOM elements
+const DisplayController = (function() {
     const boardContainer = document.getElementById('board');
     const statusDiv = document.getElementById('status');
     const resetBtn = document.getElementById('reset-btn');
     const cells = document.querySelectorAll('.cell');
 
-    // Render the current state of the board onto the screen
     const renderBoard = () => {
         const currentBoard = Gameboard.getBoard();
-
         cells.forEach((cell, index) => {
             cell.textContent = currentBoard[index];
         });
     };
 
-    // Update the status text dynamically
     const updateStatus = (message) => {
         statusDiv.textContent = message;
     };
 
-    // --- EVENT LISTENERS ---
-
-    // 1. Click listener for the grid cells
+    // Click listener for grid cells
     boardContainer.addEventListener('click', (e) => {
         const targetCell = e.target;
-
-        // Ensure the user clicked an actual cell, not the gap between them
         if (!targetCell.classList.contains('cell')) return;
 
         const index = targetCell.getAttribute('data-index');
-
-        // Play round via GameController
-        // (We can check if the game is already won/tied or let GameController handle turn logic)
-        const activePlayerBefore = GameController.getActivePlayer();
-
-        // Attempt move
         const currentBoard = Gameboard.getBoard();
-        if (currentBoard[index] !== '') return; // Spot taken, do nothing
 
-        // Execute move
-        GameController.playRound(Number(index));
+        // Prevent clicking if spot is already taken
+        if (currentBoard[index] !== '') return;
+
+        // Play the round and capture the returned result object
+        const roundResult = GameController.playRound(Number(index));
+
+        // If game was already over, do nothing
+        if (roundResult.result === 'over') return;
+
+        // Re-render the board visually
         renderBoard();
 
-        // Update status text based on game outcome
-        const updatedBoard = Gameboard.getBoard();
-
-        // Quick check for win/tie state to update text banner
-        // (We can extract this cleanly, or read from GameController state)
-        const nextPlayer = GameController.getActivePlayer();
-        updateStatus(`${nextPlayer.name}'s (${nextPlayer.marker}) turn`);
+        // Handle UI status changes based on game outcome
+        if (roundResult.result === 'win') {
+            updateStatus(`🎉 Winner: ${roundResult.winner.name} (${roundResult.winner.marker})!`);
+        } else if (roundResult.result === 'tie') {
+            updateStatus(`It's a Tie Game! 🤝`);
+        } else {
+            // Keep going, show next player's turn
+            const nextPlayer = GameController.getActivePlayer();
+            updateStatus(`${nextPlayer.name}'s (${nextPlayer.marker}) turn`);
+        }
     });
 
-    // 2. Click listener for the reset button
+    // Reset button listener
     resetBtn.addEventListener('click', () => {
         GameController.resetGame();
         renderBoard();
         updateStatus("Player One's (X) turn");
     });
 
-    // Initial render call on load
     renderBoard();
 
     return {
@@ -200,33 +194,33 @@ const DisplayController = (function () {
 
 
 
-// Check initial state
-console.log(GameController.getActivePlayer()); // Should be Player One (X)
+// // Check initial state
+// console.log(GameController.getActivePlayer()); // Should be Player One (X)
 
-// Play a few moves
-GameController.playRound(0); // Player One places X at top-left
-GameController.playRound(4); // Player Two places O at center
-GameController.playRound(1); // Player One places X at top-middle
-console.log([...GameController.getBoard()]); // View board state safely
+// // Play a few moves
+// GameController.playRound(0); // Player One places X at top-left
+// GameController.playRound(4); // Player Two places O at center
+// GameController.playRound(1); // Player One places X at top-middle
+// console.log([...GameController.getBoard()]); // View board state safely
 
-// Simulate Player One winning the top row
-GameController.playRound(8); // Player Two blocks somewhere
-GameController.playRound(2); // Player One places X at top-right -> WIN!
+// // Simulate Player One winning the top row
+// GameController.playRound(8); // Player Two blocks somewhere
+// GameController.playRound(2); // Player One places X at top-right -> WIN!
 
-//don't chain calling like below it perform in one shot only getting and reset it so array empty 
-//it don't work as step by step sequence call it work return by reference
-//console.log(Gameboard.setMarker(0, 'x'), Gameboard.getBoard(), Gameboard.resetBoard());
-//call by proffessional step by step 
-// Gameboard.setMarker(0,'X')
+// //don't chain calling like below it perform in one shot only getting and reset it so array empty 
+// //it don't work as step by step sequence call it work return by reference
+// //console.log(Gameboard.setMarker(0, 'x'), Gameboard.getBoard(), Gameboard.resetBoard());
+// //call by proffessional step by step 
+// // Gameboard.setMarker(0,'X')
 
-// console.log(Gameboard.getBoard())  //x will place at first index
-// // console.log(Gameboard.resetBoard()); //now it undefined
-//  Gameboard.resetBoard()  //this is write to call .
-//  console.log(Gameboard.getBoard()) //because of reset it will empty will appear on 1st index above also
+// // console.log(Gameboard.getBoard())  //x will place at first index
+// // // console.log(Gameboard.resetBoard()); //now it undefined
+// //  Gameboard.resetBoard()  //this is write to call .
+// //  console.log(Gameboard.getBoard()) //because of reset it will empty will appear on 1st index above also
 
-//  //or by ...spread operation save zone
-//  console.log(
-//     Gameboard.setMarker(0, 'x'), 
-//     [...Gameboard.getBoard()], // Spread creates a safe clone!
-//     Gameboard.resetBoard()
-// );
+// //  //or by ...spread operation save zone
+// //  console.log(
+// //     Gameboard.setMarker(0, 'x'), 
+// //     [...Gameboard.getBoard()], // Spread creates a safe clone!
+// //     Gameboard.resetBoard()
+// // );
