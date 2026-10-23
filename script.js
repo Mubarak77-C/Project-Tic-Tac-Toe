@@ -42,8 +42,8 @@ const createPlayer = (name, marker) => {
 // 3. THE GAME FLOW CONTROLLER (Module Pattern)
 // ==========================================
 // An IIFE that manages turn-taking, win/tie validation, and round execution.
-const GameController = (function() {
-    
+const GameController = (function () {
+
     // Instantiate our two players using the Player Factory
     const players = [
         createPlayer("Player One", "X"),
@@ -98,11 +98,11 @@ const GameController = (function() {
     const playRound = (index) => {
         // Attempt to place marker using the Gameboard module
         const success = Gameboard.setMarker(index, activePlayer.marker);
-        
+
         // If the spot was already taken, exit early without changing turns
         if (!success) {
             console.log("Invalid move! Spot is already taken.");
-            return; 
+            return;
         }
 
         // Fetch current board state to check win conditions
@@ -138,6 +138,82 @@ const GameController = (function() {
         }
     };
 })();
+
+
+// ==========================================
+// 4. THE DISPLAY CONTROLLER (Module Pattern)
+// ==========================================
+// Handles all DOM rendering and user interaction events.
+const DisplayController = (function () {
+
+    // Cache DOM elements
+    const boardContainer = document.getElementById('board');
+    const statusDiv = document.getElementById('status');
+    const resetBtn = document.getElementById('reset-btn');
+    const cells = document.querySelectorAll('.cell');
+
+    // Render the current state of the board onto the screen
+    const renderBoard = () => {
+        const currentBoard = Gameboard.getBoard();
+
+        cells.forEach((cell, index) => {
+            cell.textContent = currentBoard[index];
+        });
+    };
+
+    // Update the status text dynamically
+    const updateStatus = (message) => {
+        statusDiv.textContent = message;
+    };
+
+    // --- EVENT LISTENERS ---
+
+    // 1. Click listener for the grid cells
+    boardContainer.addEventListener('click', (e) => {
+        const targetCell = e.target;
+
+        // Ensure the user clicked an actual cell, not the gap between them
+        if (!targetCell.classList.contains('cell')) return;
+
+        const index = targetCell.getAttribute('data-index');
+
+        // Play round via GameController
+        // (We can check if the game is already won/tied or let GameController handle turn logic)
+        const activePlayerBefore = GameController.getActivePlayer();
+
+        // Attempt move
+        const currentBoard = Gameboard.getBoard();
+        if (currentBoard[index] !== '') return; // Spot taken, do nothing
+
+        // Execute move
+        GameController.playRound(Number(index));
+        renderBoard();
+
+        // Update status text based on game outcome
+        const updatedBoard = Gameboard.getBoard();
+
+        // Quick check for win/tie state to update text banner
+        // (We can extract this cleanly, or read from GameController state)
+        const nextPlayer = GameController.getActivePlayer();
+        updateStatus(`${nextPlayer.name}'s (${nextPlayer.marker}) turn`);
+    });
+
+    // 2. Click listener for the reset button
+    resetBtn.addEventListener('click', () => {
+        GameController.resetGame();
+        renderBoard();
+        updateStatus("Player One's (X) turn");
+    });
+
+    // Initial render call on load
+    renderBoard();
+
+    return {
+        renderBoard,
+        updateStatus
+    };
+})();
+
 
 
 
