@@ -42,91 +42,73 @@ const createPlayer = (name, marker) => {
 // 3. THE GAME FLOW CONTROLLER (Module Pattern)
 // ==========================================
 // An IIFE that manages turn-taking, win/tie validation, and round execution.
-const GameController = (function () {
-
-    // Instantiate our two players using the Player Factory
+const GameController = (function() {
     const players = [
         createPlayer("Player One", "X"),
         createPlayer("Player Two", "O")
     ];
 
-    // Track whose turn it is currently
-    let activePlayer = players[0]; // Player One always starts
+    let activePlayer = players[0];
+    let isGameOver = false; // <-- NEW: Tracks if the game has ended
 
-    // Helper function to switch turns
     const switchPlayerTurn = () => {
-        // Ternary operator: if active is player 0, switch to player 1, else switch to player 0
         activePlayer = activePlayer === players[0] ? players[1] : players[0];
     };
 
-    // Public getter for the UI to know who is active
     const getActivePlayer = () => activePlayer;
 
-    // Helper to print current round info to console
-    const printNewRound = () => {
-        console.log(`${getActivePlayer().name}'s (${getActivePlayer().marker}) turn.`);
-    };
-
-    // Winning combinations indices on a 3x3 grid (Rows, Columns, Diagonals)
     const winningCombinations = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
         [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
         [0, 4, 8], [2, 4, 6]            // Diagonals
     ];
 
-    // Check if the current board state results in a win or a tie
     const checkWinOrTie = (board) => {
-        // 1. Loop through all winning combinations
         for (let combo of winningCombinations) {
             const [a, b, c] = combo;
-            // Check if all three spots have the same marker and are not empty
             if (board[a] && board[a] === board[b] && board[a] === board[c]) {
                 return { result: 'win', winner: activePlayer };
             }
         }
 
-        // 2. Check for a tie (if board has no empty strings left)
         if (!board.includes('')) {
             return { result: 'tie' };
         }
 
-        // 3. Otherwise, game is still ongoing
         return { result: 'ongoing' };
     };
 
-    // Core method: Play a round at a specific grid index (0-8)
+    // Modified to return status object so UI can react
     const playRound = (index) => {
-        // Attempt to place marker using the Gameboard module
-        const success = Gameboard.setMarker(index, activePlayer.marker);
-
-        // If the spot was already taken, exit early without changing turns
-        if (!success) {
-            console.log("Invalid move! Spot is already taken.");
-            return;
+        // GUARD CLAUSE: If game is over, reject any moves immediately
+        if (isGameOver) {
+            return { result: 'over' };
         }
 
-        // Fetch current board state to check win conditions
+        const success = Gameboard.setMarker(index, activePlayer.marker);
+        
+        if (!success) {
+            return { result: 'invalid' };
+        }
+
         const currentBoard = Gameboard.getBoard();
         const gameStatus = checkWinOrTie(currentBoard);
 
-        // Handle Win state
         if (gameStatus.result === 'win') {
-            console.log(`🎉 ${gameStatus.winner.name} wins the game!`);
-            return;
+            isGameOver = true; // Lock the game!
+            return { result: 'win', winner: activePlayer };
         }
 
-        // Handle Tie state
         if (gameStatus.result === 'tie') {
-            console.log(`It's a tie game!`);
-            return;
+            isGameOver = true; // Lock the game!
+            return { result: 'tie' };
         }
 
-        // If no win or tie, switch turn to the next player
+        // If ongoing, switch turn
         switchPlayerTurn();
-        printNewRound();
+        return { result: 'ongoing' };
     };
 
-    // Public API exposed to the world
     return {
         playRound,
         getActivePlayer,
@@ -134,7 +116,8 @@ const GameController = (function () {
         resetGame: () => {
             Gameboard.resetBoard();
             activePlayer = players[0];
-            console.log("Game reset. Player One's turn.");
+            isGameOver = false; // <-- Unlock the game on reset
+            console.log("Game reset.");
         }
     };
 })();
